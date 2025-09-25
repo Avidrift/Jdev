@@ -350,18 +350,34 @@
             statsObserver.observe(statsContainer);
         }
 
-        // Función para enviar datos a Supabase
+// REEMPLAZA la función submitForm con esta versión mejorada para debugging:
+
         async function submitForm(formData) {
             try {
                 const SUPABASE_URL = 'https://ecrjoltfbvbtgzpboudq.supabase.co';
                 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjcmpvbHRmYnZidGd6cGJvdWRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4Mjg3MTUsImV4cCI6MjA3NDQwNDcxNX0.s3aJnl3pd_0vgMJBT7JoDhjayGitHvMkPdfB8N5krXE';
                 
-                console.log('Sending data:', {
+                // Debug info
+                console.log('Environment:', {
+                    url: window.location.href,
+                    protocol: window.location.protocol,
+                    hostname: window.location.hostname
+                });
+                
+                const dataToSend = {
                     nombre: formData.get('name'),
                     email: formData.get('email'),
-                    telefono: formData.get('phone'),
-                    mensaje: formData.get('message')
-                });
+                    telefono: formData.get('phone') || '',
+                    mensaje: formData.get('message'),
+                    fecha_creacion: new Date().toISOString()
+                };
+                
+                console.log('Sending to Supabase:', dataToSend);
+                
+                // Verificar que todos los campos requeridos estén presentes
+                if (!dataToSend.nombre || !dataToSend.email || !dataToSend.mensaje) {
+                    throw new Error('Faltan campos requeridos');
+                }
                 
                 const response = await fetch(`${SUPABASE_URL}/rest/v1/contactos`, {
                     method: 'POST',
@@ -371,27 +387,72 @@
                         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
                         'Prefer': 'return=minimal'
                     },
-                    body: JSON.stringify({
-                        nombre: formData.get('name'),
-                        email: formData.get('email'),
-                        telefono: formData.get('phone') || '',
-                        mensaje: formData.get('message'),
-                        fecha_creacion: new Date().toISOString()
-                    })
+                    body: JSON.stringify(dataToSend)
                 });
 
-                console.log('Response status:', response.status);
+                console.log('Response details:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: Object.fromEntries([...response.headers.entries()]),
+                    url: response.url
+                });
                 
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Supabase error:', errorText);
-                    throw new Error(`Error ${response.status}: ${errorText}`);
+                    let errorText = '';
+                    try {
+                        errorText = await response.text();
+                    } catch (e) {
+                        errorText = 'No se pudo leer el error';
+                    }
+                    
+                    console.error('Supabase error details:', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        errorText: errorText
+                    });
+                    
+                    // Mostrar error más específico
+                    if (response.status === 400) {
+                        throw new Error('Error de validación de datos');
+                    } else if (response.status === 401) {
+                        throw new Error('Error de autenticación');
+                    } else if (response.status === 403) {
+                        throw new Error('Error de permisos - verifica las políticas RLS');
+                    } else if (response.status === 0 || response.status === 500) {
+                        throw new Error('Error de conexión - posible problema de CORS');
+                    } else {
+                        throw new Error(`Error ${response.status}: ${errorText}`);
+                    }
                 }
 
+                console.log('✅ Success! Data sent to Supabase');
                 return { success: true };
+                
             } catch (error) {
-                console.error('Submit error:', error);
-                return { success: false, error: error.message };
+                console.error('Submit error details:', {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                });
+                
+                // Mostrar error más específico al usuario
+                let userMessage = 'Error desconocido';
+                
+                if (error.message.includes('CORS')) {
+                    userMessage = 'Error de conexión. Verifica la configuración de CORS.';
+                } else if (error.message.includes('Failed to fetch')) {
+                    userMessage = 'No se pudo conectar con el servidor. Verifica tu conexión.';
+                } else if (error.message.includes('NetworkError')) {
+                    userMessage = 'Error de red. Intenta nuevamente.';
+                } else {
+                    userMessage = error.message;
+                }
+                
+                return { 
+                    success: false, 
+                    error: userMessage,
+                    details: error.message 
+                };
             }
         }
 
