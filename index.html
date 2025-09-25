@@ -16,7 +16,7 @@
     <!-- Header -->
     <header class="header">
         <nav class="nav-container">
-            <div class="logo">Jdev</div>
+            <div class="logo" style="align-items: center; display: flex; flex-direction: row;"><img src='https://i.postimg.cc/CMQs8fkX/Logo.png' border='0' alt='Logo'  height="70px"/></a>JDEV</div>
             <ul class="nav-links">
                 <li><a href="#inicio">Inicio</a></li>
                 <li><a href="#productos">Productos</a></li>
@@ -281,11 +281,37 @@
             observer.observe(el);
         });
 
-        // Manejo del formulario
-        document.querySelector('form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            alert('¡Gracias por tu interés! Nos pondremos en contacto contigo dentro de las próximas 24 horas para agendar una consulta.');
-            this.reset();
+// 3. REEMPLAZAR EL JAVASCRIPT DEL FORMULARIO
+        // Función para mostrar el modal
+        function showModal() {
+            document.getElementById('successModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Función para cerrar el modal
+        function closeModal() {
+            const modal = document.getElementById('successModal');
+            modal.style.animation = 'modalFadeIn 0.3s ease reverse';
+            setTimeout(() => {
+                modal.style.display = 'none';
+                modal.style.animation = '';
+                document.body.style.overflow = '';
+            }, 300);
+        }
+
+        // Cerrar modal al hacer clic fuera
+        window.onclick = function(event) {
+            const modal = document.getElementById('successModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+                // Cerrar modal con ESC
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
         });
 
         // Efecto de conteo en estadísticas
@@ -322,6 +348,83 @@
         if (statsContainer) {
             statsObserver.observe(statsContainer);
         }
+
+
+         // NUEVA FUNCIÓN PARA ENVIAR DATOS A LA BASE DE DATOS
+        async function submitForm(formData) {
+            try {
+                // Configuración de Supabase (reemplaza con tus credenciales)
+                const SUPABASE_URL = 'https://ecrjoltfbvbtgzpboudq.supabase.co';
+                const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjcmpvbHRmYnZidGd6cGJvdWRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4Mjg3MTUsImV4cCI6MjA3NDQwNDcxNX0.s3aJnl3pd_0vgMJBT7JoDhjayGitHvMkPdfB8N5krXE';
+                
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/contactos`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        nombre: formData.get('name'),
+                        email: formData.get('email'),
+                        telefono: formData.get('phone'),
+                        mensaje: formData.get('message'),
+                        fecha_creacion: new Date().toISOString()
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al enviar los datos');
+                }
+
+                return { success: true };
+            } catch (error) {
+                console.error('Error:', error);
+                return { success: false, error: error.message };
+            }
+        }
+
+        // AGREGAR ESTE BLOQUE AL FINAL DE TU SCRIPT (después de la función submitForm)
+
+// Event Listener del formulario - REEMPLAZA EL ANTERIOR
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const submitBtn = document.querySelector('.submit-btn');
+
+    if (form && submitBtn) {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Mostrar estado de carga
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Enviando...';
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+            
+            // Obtener datos del formulario
+            const formData = new FormData(this);
+            
+            // Enviar a la base de datos
+            const result = await submitForm(formData);
+            
+            // Restaurar botón
+            submitBtn.textContent = originalText;
+            submitBtn.classList.remove('loading');
+            submitBtn.disabled = false;
+            
+            if (result.success) {
+                // Mostrar modal de éxito
+                showModal();
+                this.reset();
+            } else {
+                // Mostrar error
+                alert('Hubo un error al enviar tu consulta. Por favor, intenta nuevamente.');
+            }
+        });
+    }
+});
+
+
     </script>
 <!-- 
         <script type="text/javascript">
@@ -342,6 +445,35 @@
         </script>
 
 Footer -->
+
+
+            <!-- Modal de Éxito -->
+    <div id="successModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close-btn">&times;</span>
+                <div class="success-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+            <div class="modal-body">
+                <h3>¡Gracias por tu interés!</h3>
+                <p>Nos pondremos en contacto contigo dentro de las próximas 24 horas para agendar una consulta.</p>
+                <div class="modal-details">
+                    <p><strong>Próximos pasos:</strong></p>
+                    <ul>
+                        <li>Revisaremos tu solicitud</li>
+                        <li>Te contactaremos para agendar una cita</li>
+                        <li>Analizaremos la mejor solución para tu negocio</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn" onclick="closeModal()">Entendido</button>
+            </div>
+        </div>
+    </div>
+
 
 </body>
 </html>
