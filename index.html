@@ -71,7 +71,7 @@
                             </div>
                         </div>
                         <div class="service-image">
-                            <img src="https://i.postimg.cc/jdzHJsSZ/image.png" alt="Página Empresarial - Captura de pantalla" />
+                            <img src="https://i.postimg.cc/J0xGZhrp/image.png" alt="Página Empresarial - Captura de pantalla" />
                         </div>
                     </div>
                 </div>
@@ -181,26 +181,27 @@
             <div class="contact-content">
                 <div class="contact-form">
                     <h3>Solicita una Consulta</h3>
-                    <form>
+                    <form id="contactForm">
                         <div class="form-group">
                             <label for="name">Nombre completo</label>
-                            <input type="text" id="name" placeholder="Ingresa tu nombre completo" required>
+                            <input type="text" id="name" name="name" placeholder="Ingresa tu nombre completo" required>
                         </div>
                         <div class="form-group">
                             <label for="email">Correo electrónico</label>
-                            <input type="email" id="email" placeholder="tu@email.com" required>
+                            <input type="email" id="email" name="email" placeholder="tu@email.com" required>
                         </div>
                         <div class="form-group">
                             <label for="phone">Teléfono</label>
-                            <input type="tel" id="phone" placeholder="+57 300 123 4567">
+                            <input type="tel" id="phone" name="phone" placeholder="+57 300 123 4567">
                         </div>
                         <div class="form-group">
                             <label for="message">¿Qué producto te interesa?</label>
-                            <textarea id="message" placeholder="Cuéntanos sobre tu negocio y qué solución necesitas..." required></textarea>
+                            <textarea id="message" name="message" placeholder="Cuéntanos sobre tu negocio y qué solución necesitas..." required></textarea>
                         </div>
-                        <button type="submit" class="submit-btn">Enviar Consulta</button>
+                        <button type="submit" class="submit-btn" id="submitBtn">Enviar Consulta</button>
                     </form>
                 </div>
+
                 <div class="contact-info">
                     <h3>Información de Contacto</h3>
                     <div class="contact-item">
@@ -282,7 +283,6 @@
             observer.observe(el);
         });
 
-// 3. REEMPLAZAR EL JAVASCRIPT DEL FORMULARIO
         // Función para mostrar el modal
         function showModal() {
             document.getElementById('successModal').style.display = 'block';
@@ -308,7 +308,7 @@
             }
         }
 
-                // Cerrar modal con ESC
+        // Cerrar modal con ESC
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 closeModal();
@@ -350,102 +350,90 @@
             statsObserver.observe(statsContainer);
         }
 
-
-         // NUEVA FUNCIÓN PARA ENVIAR DATOS A LA BASE DE DATOS
+        // Función para enviar datos a Supabase
         async function submitForm(formData) {
             try {
-                // Configuración de Supabase (reemplaza con tus credenciales)
                 const SUPABASE_URL = 'https://ecrjoltfbvbtgzpboudq.supabase.co';
                 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjcmpvbHRmYnZidGd6cGJvdWRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4Mjg3MTUsImV4cCI6MjA3NDQwNDcxNX0.s3aJnl3pd_0vgMJBT7JoDhjayGitHvMkPdfB8N5krXE';
+                
+                console.log('Sending data:', {
+                    nombre: formData.get('name'),
+                    email: formData.get('email'),
+                    telefono: formData.get('phone'),
+                    mensaje: formData.get('message')
+                });
                 
                 const response = await fetch(`${SUPABASE_URL}/rest/v1/contactos`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Prefer': 'return=minimal'
                     },
                     body: JSON.stringify({
                         nombre: formData.get('name'),
                         email: formData.get('email'),
-                        telefono: formData.get('phone'),
+                        telefono: formData.get('phone') || '',
                         mensaje: formData.get('message'),
                         fecha_creacion: new Date().toISOString()
                     })
                 });
 
+                console.log('Response status:', response.status);
+                
                 if (!response.ok) {
-                    throw new Error('Error al enviar los datos');
+                    const errorText = await response.text();
+                    console.error('Supabase error:', errorText);
+                    throw new Error(`Error ${response.status}: ${errorText}`);
                 }
 
                 return { success: true };
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Submit error:', error);
                 return { success: false, error: error.message };
             }
         }
 
-        // AGREGAR ESTE BLOQUE AL FINAL DE TU SCRIPT (después de la función submitForm)
+        // Event listener del formulario
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('contactForm');
+            const submitBtn = document.getElementById('submitBtn');
 
-// Event Listener del formulario - REEMPLAZA EL ANTERIOR
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('form');
-    const submitBtn = document.querySelector('.submit-btn');
-
-    if (form && submitBtn) {
-        form.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            // Mostrar estado de carga
-            const originalText = submitBtn.textContent;
-            submitBtn.textContent = 'Enviando...';
-            submitBtn.classList.add('loading');
-            submitBtn.disabled = true;
-            
-            // Obtener datos del formulario
-            const formData = new FormData(this);
-            
-            // Enviar a la base de datos
-            const result = await submitForm(formData);
-            
-            // Restaurar botón
-            submitBtn.textContent = originalText;
-            submitBtn.classList.remove('loading');
-            submitBtn.disabled = false;
-            
-            if (result.success) {
-                // Mostrar modal de éxito
-                showModal();
-                this.reset();
+            if (form && submitBtn) {
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const originalText = submitBtn.textContent;
+                    submitBtn.textContent = 'Enviando...';
+                    submitBtn.classList.add('loading');
+                    submitBtn.disabled = true;
+                    
+                    try {
+                        const formData = new FormData(this);
+                        const result = await submitForm(formData);
+                        
+                        if (result.success) {
+                            showModal();
+                            this.reset();
+                        } else {
+                            alert(`Error: ${result.error}`);
+                        }
+                    } catch (error) {
+                        console.error('Form submission error:', error);
+                        alert('Error inesperado al enviar el formulario.');
+                    } finally {
+                        submitBtn.textContent = originalText;
+                        submitBtn.classList.remove('loading');
+                        submitBtn.disabled = false;
+                    }
+                });
             } else {
-                // Mostrar error
-                alert('Hubo un error al enviar tu consulta. Por favor, intenta nuevamente.');
+                console.error('Form o submit button no encontrados');
             }
         });
-    }
-});
-
-
     </script>
-<!-- 
-        <script type="text/javascript">
-        (function(d, t) {
-            var v = d.createElement(t), s = d.getElementsByTagName(t)[0];
-            v.onload = function() {
-                window.voiceflow.chat.load({
-                verify: { projectID: '68ca17e035077f19b7861796' },
-                url: 'https://general-runtime.voiceflow.com',
-                versionID: 'production',
-                voice: {
-                    url: "https://runtime-api.voiceflow.com"
-                }
-                });
-            }
-            v.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs"; v.type = "text/javascript"; s.parentNode.insertBefore(v, s);
-        })(document, 'script');
-        </script>
 
-Footer -->
 
 
             <!-- Modal de Éxito -->
